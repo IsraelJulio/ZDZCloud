@@ -9,6 +9,7 @@ const config = useRuntimeConfig()
 const apiBase = config.public.apiBase
 
 const form = reactive({ nome: '', descricao: '' })
+const nomeTocado = ref(false)
 
 const { data: categorias, refresh } = await useFetch<Categoria[]>(`${apiBase}/api/categorias`)
 
@@ -33,6 +34,7 @@ async function salvar() {
   })
   form.nome = ''
   form.descricao = ''
+  nomeTocado.value = false
   await refresh()
 }
 
@@ -93,13 +95,27 @@ async function excluir() {
       <h2 class="form-title">Nova Categoria</h2>
       <div class="form-group">
         <label>Nome</label>
-        <input v-model="form.nome" type="text" placeholder="Nome da categoria" />
+        <input
+          v-model="form.nome"
+          type="text"
+          placeholder="Nome da categoria"
+          :class="{ 'input-error': nomeTocado && form.nome.length < 5 }"
+          @input="nomeTocado = true"
+        />
+        <span v-if="nomeTocado && form.nome.length < 5" class="field-hint error">
+          Mínimo 5 caracteres ({{ form.nome.length }}/5)
+        </span>
       </div>
       <div class="form-group">
         <label>Descrição</label>
         <input v-model="form.descricao" type="text" placeholder="Descrição" />
       </div>
-      <button @click="salvar" :disabled="form.nome.length < 5" class="btn btn-primary">
+      <button
+        @click="salvar"
+        :disabled="form.nome.length < 5"
+        :title="form.nome.length < 5 ? 'O nome deve ter pelo menos 5 caracteres' : ''"
+        class="btn btn-primary"
+      >
         Salvar
       </button>
     </div>
@@ -218,6 +234,20 @@ async function excluir() {
 
 .form-group input:focus {
   border-color: #3b82f6;
+}
+
+.form-group input.input-error {
+  border-color: #ef4444;
+}
+
+.field-hint {
+  font-size: 0.78rem;
+  color: #94a3b8;
+  margin-top: 0.1rem;
+}
+
+.field-hint.error {
+  color: #ef4444;
 }
 
 .btn {

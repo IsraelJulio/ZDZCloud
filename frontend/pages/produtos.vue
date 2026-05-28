@@ -17,6 +17,8 @@ const config = useRuntimeConfig()
 const apiBase = config.public.apiBase
 
 const form = reactive({ nome: '', descricao: '', preco: 0, categoriaId: '' })
+const nomeTocado = ref(false)
+const categoriaTocada = ref(false)
 
 const { data: produtos, refresh } = await useFetch<Produto[]>(`${apiBase}/api/produtos`)
 const { data: categorias } = await useFetch<Categoria[]>(`${apiBase}/api/categorias`)
@@ -49,6 +51,8 @@ async function salvar() {
   form.descricao = ''
   form.preco = 0
   form.categoriaId = ''
+  nomeTocado.value = false
+  categoriaTocada.value = false
   await refresh()
 }
 
@@ -109,7 +113,16 @@ async function excluir() {
       <h2 class="form-title">Novo Produto</h2>
       <div class="form-group">
         <label>Nome</label>
-        <input v-model="form.nome" type="text" placeholder="Nome do produto" />
+        <input
+          v-model="form.nome"
+          type="text"
+          placeholder="Nome do produto"
+          :class="{ 'input-error': nomeTocado && form.nome.length < 5 }"
+          @input="nomeTocado = true"
+        />
+        <span v-if="nomeTocado && form.nome.length < 5" class="field-hint error">
+          Mínimo 5 caracteres ({{ form.nome.length }}/5)
+        </span>
       </div>
       <div class="form-group">
         <label>Descrição</label>
@@ -121,14 +134,26 @@ async function excluir() {
       </div>
       <div class="form-group">
         <label>Categoria</label>
-        <select v-model="form.categoriaId">
+        <select
+          v-model="form.categoriaId"
+          :class="{ 'input-error': categoriaTocada && !form.categoriaId }"
+          @change="categoriaTocada = true"
+        >
           <option value="" disabled>Selecione uma categoria</option>
           <option v-for="cat in categorias" :key="cat.id" :value="cat.id">
             {{ cat.nome }}
           </option>
         </select>
+        <span v-if="categoriaTocada && !form.categoriaId" class="field-hint error">
+          Selecione uma categoria
+        </span>
       </div>
-      <button @click="salvar" :disabled="form.nome.length < 5" class="btn btn-primary">
+      <button
+        @click="salvar"
+        :disabled="form.nome.length < 5 || !form.categoriaId"
+        :title="form.nome.length < 5 ? 'O nome deve ter pelo menos 5 caracteres' : !form.categoriaId ? 'Selecione uma categoria' : ''"
+        class="btn btn-primary"
+      >
         Salvar
       </button>
     </div>
@@ -255,6 +280,21 @@ async function excluir() {
 .form-group input:focus,
 .form-group select:focus {
   border-color: #3b82f6;
+}
+
+.form-group input.input-error,
+.form-group select.input-error {
+  border-color: #ef4444;
+}
+
+.field-hint {
+  font-size: 0.78rem;
+  color: #94a3b8;
+  margin-top: 0.1rem;
+}
+
+.field-hint.error {
+  color: #ef4444;
 }
 
 .btn {

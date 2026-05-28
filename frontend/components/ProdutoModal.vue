@@ -29,6 +29,7 @@ const form = reactive({
   preco: props.produto.preco,
   categoriaId: props.produto.categoriaId
 })
+const nomeTocado = ref(false)
 
 async function salvar() {
   const atualizado = await $fetch<Produto>(`${apiBase}/api/produtos/${props.produto.id}`, {
@@ -51,7 +52,15 @@ async function salvar() {
 
       <div class="form-group">
         <label>Nome</label>
-        <input v-model="form.nome" type="text" />
+        <input
+          v-model="form.nome"
+          type="text"
+          :class="{ 'input-error': nomeTocado && form.nome.length < 5 }"
+          @input="nomeTocado = true"
+        />
+        <span v-if="nomeTocado && form.nome.length < 5" class="field-hint error">
+          Mínimo 5 caracteres ({{ form.nome.length }}/5)
+        </span>
       </div>
       <div class="form-group">
         <label>Descrição</label>
@@ -72,7 +81,12 @@ async function salvar() {
 
       <div class="modal-actions">
         <button @click="emit('fechar')" class="btn btn-secondary">Cancelar</button>
-        <button @click="salvar" :disabled="form.nome.length < 5" class="btn btn-primary">Salvar</button>
+        <button
+          @click="salvar"
+          :disabled="form.nome.length < 5"
+          :title="form.nome.length < 5 ? 'O nome deve ter pelo menos 5 caracteres' : ''"
+          class="btn btn-primary"
+        >Salvar</button>
       </div>
     </div>
   </div>
@@ -132,6 +146,20 @@ async function salvar() {
 .form-group input:focus,
 .form-group select:focus {
   border-color: #3b82f6;
+}
+
+.form-group input.input-error {
+  border-color: #ef4444;
+}
+
+.field-hint {
+  font-size: 0.78rem;
+  color: #94a3b8;
+  margin-top: 0.1rem;
+}
+
+.field-hint.error {
+  color: #ef4444;
 }
 
 .modal-actions {
