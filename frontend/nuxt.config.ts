@@ -1,6 +1,6 @@
 export default defineNuxtConfig({
-  modules: ['@nuxt/ui'],
-  css: ['~/assets/css/main.css'],
+  modules: ["@nuxt/ui"],
+  css: ["~/assets/css/main.css"],
   devtools: { enabled: true },
   fonts: {
     providers: {
@@ -9,16 +9,17 @@ export default defineNuxtConfig({
       fontsource: false,
       fontshare: false,
       bunny: false,
-    }
+    },
   },
   icon: {
     serverBundle: {
-      collections: ['lucide']
-    }
+      collections: ["lucide"],
+    },
   },
   runtimeConfig: {
     public: {
-      apiBase: 'http://localhost:5257'
-    }
-  }
-})
+      // apiBase: 'http://localhost:5257'
+      apiBase: "http://zdzcloud-production.up.railway.app",
+    },
+  },
+});
