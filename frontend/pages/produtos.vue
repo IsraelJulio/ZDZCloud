@@ -28,13 +28,21 @@ const produtoEditando = ref<Produto | null>(null)
 const showConfirm = ref(false)
 const produtoParaDeletar = ref<Produto | null>(null)
 const errorToast = ref<string | null>(null)
+const successToast = ref<string | null>(null)
 
 let toastTimer: ReturnType<typeof setTimeout> | null = null
+let successTimer: ReturnType<typeof setTimeout> | null = null
 
 function mostrarErro(mensagem: string) {
   errorToast.value = mensagem
   if (toastTimer) clearTimeout(toastTimer)
   toastTimer = setTimeout(() => { errorToast.value = null }, 5000)
+}
+
+function mostrarSucesso(mensagem: string) {
+  successToast.value = mensagem
+  if (successTimer) clearTimeout(successTimer)
+  successTimer = setTimeout(() => { successToast.value = null }, 3000)
 }
 
 async function salvar() {
@@ -54,6 +62,7 @@ async function salvar() {
   nomeTocado.value = false
   categoriaTocada.value = false
   await refresh()
+  mostrarSucesso('Produto criado com sucesso.')
 }
 
 function abrirModal(produto: Produto) {
@@ -71,6 +80,7 @@ function salvarEdicao(atualizado: Produto) {
   const idx = produtos.value.findIndex(p => p.id === atualizado.id)
   if (idx !== -1) produtos.value[idx] = atualizado
   fecharModal()
+  mostrarSucesso('Produto atualizado com sucesso.')
 }
 
 function confirmarDelete(produto: Produto) {
@@ -94,6 +104,7 @@ async function excluir() {
     if (produtos.value) {
       produtos.value = produtos.value.filter(p => p.id !== id)
     }
+    mostrarSucesso('Produto excluído com sucesso.')
   } catch (e: any) {
     mostrarErro(e.data ?? 'Erro ao excluir produto.')
   }
@@ -103,6 +114,11 @@ async function excluir() {
 <template>
   <div>
     <h1 class="page-title">Produtos</h1>
+
+    <div v-if="successToast" class="toast-success">
+      {{ successToast }}
+      <button @click="successToast = null" class="toast-close">✕</button>
+    </div>
 
     <div v-if="errorToast" class="toast-error">
       {{ errorToast }}
@@ -212,6 +228,23 @@ async function excluir() {
   font-weight: 700;
   margin-bottom: 1.5rem;
   color: #1e293b;
+}
+
+.toast-success {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background-color: #f0fdf4;
+  border: 1px solid #86efac;
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  margin-bottom: 1.25rem;
+  color: #15803d;
+  font-size: 0.9rem;
+}
+
+.toast-success .toast-close {
+  color: #15803d;
 }
 
 .toast-error {
