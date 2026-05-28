@@ -23,6 +23,17 @@ const { data: categorias } = await useFetch<Categoria[]>(`${apiBase}/api/categor
 
 const showModal = ref(false)
 const produtoEditando = ref<Produto | null>(null)
+const showConfirm = ref(false)
+const produtoParaDeletar = ref<Produto | null>(null)
+const errorToast = ref<string | null>(null)
+
+let toastTimer: ReturnType<typeof setTimeout> | null = null
+
+function mostrarErro(mensagem: string) {
+  errorToast.value = mensagem
+  if (toastTimer) clearTimeout(toastTimer)
+  toastTimer = setTimeout(() => { errorToast.value = null }, 5000)
+}
 
 async function salvar() {
   await $fetch(`${apiBase}/api/produtos`, {
@@ -50,11 +61,50 @@ function fecharModal() {
   showModal.value = false
   produtoEditando.value = null
 }
+
+function salvarEdicao(atualizado: Produto) {
+  if (!produtos.value) return
+  const idx = produtos.value.findIndex(p => p.id === atualizado.id)
+  if (idx !== -1) produtos.value[idx] = atualizado
+  fecharModal()
+}
+
+function confirmarDelete(produto: Produto) {
+  produtoParaDeletar.value = produto
+  showConfirm.value = true
+}
+
+function cancelarDelete() {
+  showConfirm.value = false
+  produtoParaDeletar.value = null
+}
+
+async function excluir() {
+  if (!produtoParaDeletar.value) return
+  const id = produtoParaDeletar.value.id
+  showConfirm.value = false
+  produtoParaDeletar.value = null
+
+  try {
+    await $fetch(`${apiBase}/api/produtos/${id}`, { method: 'DELETE' })
+    if (produtos.value) {
+      const idx = produtos.value.findIndex(p => p.id === id)
+      if (idx !== -1) produtos.value.splice(idx, 1)
+    }
+  } catch (e: any) {
+    mostrarErro(e.data ?? 'Erro ao excluir produto.')
+  }
+}
 </script>
 
 <template>
   <div>
     <h1 class="page-title">Produtos</h1>
+
+    <div v-if="errorToast" class="toast-error">
+      {{ errorToast }}
+      <button @click="errorToast = null" class="toast-close">✕</button>
+    </div>
 
     <div class="form-card">
       <h2 class="form-title">Novo Produto</h2>
@@ -108,7 +158,7 @@ function fecharModal() {
             <td>{{ prod.categoria?.nome }}</td>
             <td class="acoes">
               <button @click="abrirModal(prod)" class="btn btn-edit">Editar</button>
-              <button class="btn btn-delete">Excluir</button>
+              <button @click="confirmarDelete(prod)" class="btn btn-delete">Excluir</button>
             </td>
           </tr>
         </tbody>
@@ -120,6 +170,14 @@ function fecharModal() {
       :produto="produtoEditando"
       :categorias="categorias ?? []"
       @fechar="fecharModal"
+      @salvo="salvarEdicao"
+    />
+
+    <ConfirmDialog
+      v-if="showConfirm"
+      mensagem="Tem certeza que deseja excluir este produto?"
+      @confirmar="excluir"
+      @cancelar="cancelarDelete"
     />
   </div>
 </template>
@@ -130,6 +188,29 @@ function fecharModal() {
   font-weight: 700;
   margin-bottom: 1.5rem;
   color: #1e293b;
+}
+
+.toast-error {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background-color: #fef2f2;
+  border: 1px solid #fca5a5;
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  margin-bottom: 1.25rem;
+  color: #b91c1c;
+  font-size: 0.9rem;
+}
+
+.toast-close {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #b91c1c;
+  font-size: 1rem;
+  padding: 0 0.25rem;
+  line-height: 1;
 }
 
 .form-card {

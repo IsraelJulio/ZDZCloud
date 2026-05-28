@@ -5,18 +5,24 @@ interface Categoria {
   descricao: string
 }
 
-const props = defineProps<{
-  categoria: Categoria
-}>()
+const props = defineProps<{ categoria: Categoria }>()
+const emit = defineEmits<{ fechar: []; salvo: [categoria: Categoria] }>()
 
-const emit = defineEmits<{
-  fechar: []
-}>()
+const config = useRuntimeConfig()
+const apiBase = config.public.apiBase
 
 const form = reactive({
   nome: props.categoria.nome,
   descricao: props.categoria.descricao
 })
+
+async function salvar() {
+  const atualizada = await $fetch<Categoria>(`${apiBase}/api/categorias/${props.categoria.id}`, {
+    method: 'PUT',
+    body: { nome: form.nome, descricao: form.descricao }
+  })
+  emit('salvo', atualizada)
+}
 </script>
 
 <template>
@@ -35,7 +41,7 @@ const form = reactive({
 
       <div class="modal-actions">
         <button @click="emit('fechar')" class="btn btn-secondary">Cancelar</button>
-        <button :disabled="form.nome.length < 5" class="btn btn-primary">Salvar</button>
+        <button @click="salvar" :disabled="form.nome.length < 5" class="btn btn-primary">Salvar</button>
       </div>
     </div>
   </div>

@@ -10,6 +10,7 @@ interface Produto {
   descricao: string
   preco: number
   categoriaId: number
+  categoria: Categoria
 }
 
 const props = defineProps<{
@@ -17,9 +18,10 @@ const props = defineProps<{
   categorias: Categoria[]
 }>()
 
-const emit = defineEmits<{
-  fechar: []
-}>()
+const emit = defineEmits<{ fechar: []; salvo: [produto: Produto] }>()
+
+const config = useRuntimeConfig()
+const apiBase = config.public.apiBase
 
 const form = reactive({
   nome: props.produto.nome,
@@ -27,6 +29,19 @@ const form = reactive({
   preco: props.produto.preco,
   categoriaId: props.produto.categoriaId
 })
+
+async function salvar() {
+  const atualizado = await $fetch<Produto>(`${apiBase}/api/produtos/${props.produto.id}`, {
+    method: 'PUT',
+    body: {
+      nome: form.nome,
+      descricao: form.descricao,
+      preco: form.preco,
+      categoriaId: form.categoriaId
+    }
+  })
+  emit('salvo', atualizado)
+}
 </script>
 
 <template>
@@ -57,7 +72,7 @@ const form = reactive({
 
       <div class="modal-actions">
         <button @click="emit('fechar')" class="btn btn-secondary">Cancelar</button>
-        <button :disabled="form.nome.length < 5" class="btn btn-primary">Salvar</button>
+        <button @click="salvar" :disabled="form.nome.length < 5" class="btn btn-primary">Salvar</button>
       </div>
     </div>
   </div>

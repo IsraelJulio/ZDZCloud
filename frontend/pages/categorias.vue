@@ -14,6 +14,17 @@ const { data: categorias, refresh } = await useFetch<Categoria[]>(`${apiBase}/ap
 
 const showModal = ref(false)
 const categoriaEditando = ref<Categoria | null>(null)
+const showConfirm = ref(false)
+const categoriaParaDeletar = ref<Categoria | null>(null)
+const errorToast = ref<string | null>(null)
+
+let toastTimer: ReturnType<typeof setTimeout> | null = null
+
+function mostrarErro(mensagem: string) {
+  errorToast.value = mensagem
+  if (toastTimer) clearTimeout(toastTimer)
+  toastTimer = setTimeout(() => { errorToast.value = null }, 5000)
+}
 
 async function salvar() {
   await $fetch(`${apiBase}/api/categorias`, {
@@ -34,11 +45,50 @@ function fecharModal() {
   showModal.value = false
   categoriaEditando.value = null
 }
+
+function salvarEdicao(atualizada: Categoria) {
+  if (!categorias.value) return
+  const idx = categorias.value.findIndex(c => c.id === atualizada.id)
+  if (idx !== -1) categorias.value[idx] = atualizada
+  fecharModal()
+}
+
+function confirmarDelete(categoria: Categoria) {
+  categoriaParaDeletar.value = categoria
+  showConfirm.value = true
+}
+
+function cancelarDelete() {
+  showConfirm.value = false
+  categoriaParaDeletar.value = null
+}
+
+async function excluir() {
+  if (!categoriaParaDeletar.value) return
+  const id = categoriaParaDeletar.value.id
+  showConfirm.value = false
+  categoriaParaDeletar.value = null
+
+  try {
+    await $fetch(`${apiBase}/api/categorias/${id}`, { method: 'DELETE' })
+    if (categorias.value) {
+      const idx = categorias.value.findIndex(c => c.id === id)
+      if (idx !== -1) categorias.value.splice(idx, 1)
+    }
+  } catch (e: any) {
+    mostrarErro(e.data ?? 'Erro ao excluir categoria.')
+  }
+}
 </script>
 
 <template>
   <div>
     <h1 class="page-title">Categorias</h1>
+
+    <div v-if="errorToast" class="toast-error">
+      {{ errorToast }}
+      <button @click="errorToast = null" class="toast-close">✕</button>
+    </div>
 
     <div class="form-card">
       <h2 class="form-title">Nova Categoria</h2>
@@ -75,7 +125,7 @@ function fecharModal() {
             <td>{{ cat.descricao }}</td>
             <td class="acoes">
               <button @click="abrirModal(cat)" class="btn btn-edit">Editar</button>
-              <button class="btn btn-delete">Excluir</button>
+              <button @click="confirmarDelete(cat)" class="btn btn-delete">Excluir</button>
             </td>
           </tr>
         </tbody>
@@ -86,6 +136,14 @@ function fecharModal() {
       v-if="showModal && categoriaEditando"
       :categoria="categoriaEditando"
       @fechar="fecharModal"
+      @salvo="salvarEdicao"
+    />
+
+    <ConfirmDialog
+      v-if="showConfirm"
+      mensagem="Tem certeza que deseja excluir esta categoria?"
+      @confirmar="excluir"
+      @cancelar="cancelarDelete"
     />
   </div>
 </template>
@@ -96,6 +154,29 @@ function fecharModal() {
   font-weight: 700;
   margin-bottom: 1.5rem;
   color: #1e293b;
+}
+
+.toast-error {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background-color: #fef2f2;
+  border: 1px solid #fca5a5;
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  margin-bottom: 1.25rem;
+  color: #b91c1c;
+  font-size: 0.9rem;
+}
+
+.toast-close {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #b91c1c;
+  font-size: 1rem;
+  padding: 0 0.25rem;
+  line-height: 1;
 }
 
 .form-card {
