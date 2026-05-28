@@ -9,7 +9,9 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 builder.Services.AddCors(options =>
 {
     options.AddDefaultPolicy(policy =>
-        policy.WithOrigins("http://localhost:3000")
+        policy.WithOrigins("http://localhost:3000",
+            "https://seu-front.vercel.app",
+            "https://seu-front.up.railway.app")
               .AllowAnyHeader()
               .AllowAnyMethod());
 });

@@ -19,7 +19,7 @@ export default defineNuxtConfig({
   runtimeConfig: {
     public: {
       // apiBase: 'http://localhost:5257'
-      apiBase: "http://zdzcloud-production.up.railway.app",
+      apiBase: "https://zdzcloud-production.up.railway.app",
     },
   },
 });
