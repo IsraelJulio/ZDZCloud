@@ -88,8 +88,7 @@ async function excluir() {
   try {
     await $fetch(`${apiBase}/api/produtos/${id}`, { method: 'DELETE' })
     if (produtos.value) {
-      const idx = produtos.value.findIndex(p => p.id === id)
-      if (idx !== -1) produtos.value.splice(idx, 1)
+      produtos.value = produtos.value.filter(p => p.id !== id)
     }
   } catch (e: any) {
     mostrarErro(e.data ?? 'Erro ao excluir produto.')

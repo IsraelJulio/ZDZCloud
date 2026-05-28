@@ -72,8 +72,7 @@ async function excluir() {
   try {
     await $fetch(`${apiBase}/api/categorias/${id}`, { method: 'DELETE' })
     if (categorias.value) {
-      const idx = categorias.value.findIndex(c => c.id === id)
-      if (idx !== -1) categorias.value.splice(idx, 1)
+      categorias.value = categorias.value.filter(c => c.id !== id)
     }
   } catch (e: any) {
     mostrarErro(e.data ?? 'Erro ao excluir categoria.')
