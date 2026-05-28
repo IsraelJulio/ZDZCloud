@@ -16,6 +16,11 @@ const form = reactive({
   descricao: props.categoria.descricao
 })
 const nomeTocado = ref(false)
+const open = ref(true)
+
+watch(open, (val) => {
+  if (!val) emit('fechar')
+})
 
 async function salvar() {
   const atualizada = await $fetch<Categoria>(`${apiBase}/api/categorias/${props.categoria.id}`, {
@@ -27,144 +32,31 @@ async function salvar() {
 </script>
 
 <template>
-  <div class="overlay" @click.self="emit('fechar')">
-    <div class="modal">
-      <h2 class="modal-title">Editar Categoria</h2>
+  <UModal v-model:open="open" title="Editar Categoria">
+    <template #body>
+      <div class="grid gap-4">
+        <UFormField
+          label="Nome"
+          :error="nomeTocado && form.nome.length < 5 ? `Mínimo 5 caracteres (${form.nome.length}/5)` : undefined"
+        >
+          <UInput
+            v-model="form.nome"
+            @input="nomeTocado = true"
+            class="w-full"
+          />
+        </UFormField>
 
-      <div class="form-group">
-        <label>Nome</label>
-        <input
-          v-model="form.nome"
-          type="text"
-          :class="{ 'input-error': nomeTocado && form.nome.length < 5 }"
-          @input="nomeTocado = true"
-        />
-        <span v-if="nomeTocado && form.nome.length < 5" class="field-hint error">
-          Mínimo 5 caracteres ({{ form.nome.length }}/5)
-        </span>
+        <UFormField label="Descrição">
+          <UInput v-model="form.descricao" class="w-full" />
+        </UFormField>
       </div>
-      <div class="form-group">
-        <label>Descrição</label>
-        <input v-model="form.descricao" type="text" />
-      </div>
+    </template>
 
-      <div class="modal-actions">
-        <button @click="emit('fechar')" class="btn btn-secondary">Cancelar</button>
-        <button
-          @click="salvar"
-          :disabled="form.nome.length < 5"
-          :title="form.nome.length < 5 ? 'O nome deve ter pelo menos 5 caracteres' : ''"
-          class="btn btn-primary"
-        >Salvar</button>
+    <template #footer>
+      <div class="flex justify-end gap-3 w-full">
+        <UButton color="neutral" variant="ghost" @click="open = false">Cancelar</UButton>
+        <UButton :disabled="form.nome.length < 5" @click="salvar">Salvar</UButton>
       </div>
-    </div>
-  </div>
+    </template>
+  </UModal>
 </template>
-
-<style scoped>
-.overlay {
-  position: fixed;
-  inset: 0;
-  background-color: rgba(0, 0, 0, 0.45);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 100;
-}
-
-.modal {
-  background: white;
-  border-radius: 10px;
-  padding: 1.75rem;
-  width: 100%;
-  max-width: 440px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
-}
-
-.modal-title {
-  font-size: 1.1rem;
-  font-weight: 700;
-  color: #1e293b;
-  margin-bottom: 1.25rem;
-}
-
-.form-group {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-  margin-bottom: 1rem;
-}
-
-.form-group label {
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: #475569;
-}
-
-.form-group input {
-  padding: 0.5rem 0.75rem;
-  border: 1px solid #cbd5e1;
-  border-radius: 6px;
-  font-size: 0.9rem;
-  outline: none;
-  transition: border-color 0.15s;
-}
-
-.form-group input:focus {
-  border-color: #3b82f6;
-}
-
-.form-group input.input-error {
-  border-color: #ef4444;
-}
-
-.field-hint {
-  font-size: 0.78rem;
-  color: #94a3b8;
-  margin-top: 0.1rem;
-}
-
-.field-hint.error {
-  color: #ef4444;
-}
-
-.modal-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 0.75rem;
-  margin-top: 1.5rem;
-}
-
-.btn {
-  padding: 0.5rem 1.25rem;
-  border: none;
-  border-radius: 6px;
-  font-size: 0.875rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: background-color 0.15s, opacity 0.15s;
-}
-
-.btn:disabled {
-  opacity: 0.45;
-  cursor: not-allowed;
-}
-
-.btn-primary {
-  background-color: #3b82f6;
-  color: white;
-}
-
-.btn-primary:not(:disabled):hover {
-  background-color: #2563eb;
-}
-
-.btn-secondary {
-  background-color: #e2e8f0;
-  color: #475569;
-}
-
-.btn-secondary:hover {
-  background-color: #cbd5e1;
-}
-</style>

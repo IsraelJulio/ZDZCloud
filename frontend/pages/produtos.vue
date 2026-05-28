@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import type { TableColumn } from '@nuxt/ui'
+
 interface Categoria {
   id: number
   nome: string
@@ -15,8 +17,9 @@ interface Produto {
 
 const config = useRuntimeConfig()
 const apiBase = config.public.apiBase
+const toast = useToast()
 
-const form = reactive({ nome: '', descricao: '', preco: 0, categoriaId: '' })
+const form = reactive({ nome: '', descricao: '', preco: 0, categoriaId: null as number | null })
 const nomeTocado = ref(false)
 const categoriaTocada = ref(false)
 
@@ -27,23 +30,27 @@ const showModal = ref(false)
 const produtoEditando = ref<Produto | null>(null)
 const showConfirm = ref(false)
 const produtoParaDeletar = ref<Produto | null>(null)
-const errorToast = ref<string | null>(null)
-const successToast = ref<string | null>(null)
 
-let toastTimer: ReturnType<typeof setTimeout> | null = null
-let successTimer: ReturnType<typeof setTimeout> | null = null
+const categoriasSelectItems = computed(() =>
+  (categorias.value ?? []).map(c => ({ label: c.nome, value: c.id }))
+)
 
-function mostrarErro(mensagem: string) {
-  errorToast.value = mensagem
-  if (toastTimer) clearTimeout(toastTimer)
-  toastTimer = setTimeout(() => { errorToast.value = null }, 5000)
-}
-
-function mostrarSucesso(mensagem: string) {
-  successToast.value = mensagem
-  if (successTimer) clearTimeout(successTimer)
-  successTimer = setTimeout(() => { successToast.value = null }, 3000)
-}
+const columns: TableColumn<Produto>[] = [
+  { accessorKey: 'id', header: 'ID' },
+  { accessorKey: 'nome', header: 'Nome' },
+  { accessorKey: 'descricao', header: 'Descrição' },
+  {
+    id: 'preco',
+    header: 'Preço',
+    cell: ({ row }) => `R$ ${row.original.preco?.toFixed(2) ?? '0.00'}`
+  },
+  {
+    id: 'categoria',
+    header: 'Categoria',
+    cell: ({ row }) => row.original.categoria?.nome ?? '-'
+  },
+  { id: 'acoes', header: 'Ações' }
+]
 
 async function salvar() {
   await $fetch(`${apiBase}/api/produtos`, {
@@ -52,17 +59,17 @@ async function salvar() {
       nome: form.nome,
       descricao: form.descricao,
       preco: form.preco,
-      categoriaId: Number(form.categoriaId)
+      categoriaId: form.categoriaId
     }
   })
   form.nome = ''
   form.descricao = ''
   form.preco = 0
-  form.categoriaId = ''
+  form.categoriaId = null
   nomeTocado.value = false
   categoriaTocada.value = false
   await refresh()
-  mostrarSucesso('Produto criado com sucesso.')
+  toast.add({ title: 'Produto criado com sucesso.', color: 'success', icon: 'i-lucide-check' })
 }
 
 function abrirModal(produto: Produto) {
@@ -80,7 +87,7 @@ function salvarEdicao(atualizado: Produto) {
   const idx = produtos.value.findIndex(p => p.id === atualizado.id)
   if (idx !== -1) produtos.value[idx] = atualizado
   fecharModal()
-  mostrarSucesso('Produto atualizado com sucesso.')
+  toast.add({ title: 'Produto atualizado com sucesso.', color: 'success', icon: 'i-lucide-check' })
 }
 
 function confirmarDelete(produto: Produto) {
@@ -104,106 +111,118 @@ async function excluir() {
     if (produtos.value) {
       produtos.value = produtos.value.filter(p => p.id !== id)
     }
-    mostrarSucesso('Produto excluído com sucesso.')
+    toast.add({ title: 'Produto excluído com sucesso.', color: 'success', icon: 'i-lucide-check' })
   } catch (e: any) {
-    mostrarErro(e.data ?? 'Erro ao excluir produto.')
+    toast.add({
+      title: 'Erro ao excluir',
+      description: e.data ?? 'Erro ao excluir produto.',
+      color: 'error',
+      icon: 'i-lucide-alert-circle'
+    })
   }
 }
 </script>
 
 <template>
-  <div>
-    <h1 class="page-title">Produtos</h1>
+  <div class="space-y-6">
+    <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Produtos</h1>
 
-    <div v-if="successToast" class="toast-success">
-      {{ successToast }}
-      <button @click="successToast = null" class="toast-close">✕</button>
-    </div>
+    <UCard>
+      <template #header>
+        <h2 class="text-base font-semibold text-gray-700 dark:text-gray-200">Novo Produto</h2>
+      </template>
 
-    <div v-if="errorToast" class="toast-error">
-      {{ errorToast }}
-      <button @click="errorToast = null" class="toast-close">✕</button>
-    </div>
-
-    <div class="form-card">
-      <h2 class="form-title">Novo Produto</h2>
-      <div class="form-group">
-        <label>Nome</label>
-        <input
-          v-model="form.nome"
-          type="text"
-          placeholder="Nome do produto"
-          :class="{ 'input-error': nomeTocado && form.nome.length < 5 }"
-          @input="nomeTocado = true"
-        />
-        <span v-if="nomeTocado && form.nome.length < 5" class="field-hint error">
-          Mínimo 5 caracteres ({{ form.nome.length }}/5)
-        </span>
-      </div>
-      <div class="form-group">
-        <label>Descrição</label>
-        <input v-model="form.descricao" type="text" placeholder="Descrição" />
-      </div>
-      <div class="form-group">
-        <label>Preço</label>
-        <input v-model.number="form.preco" type="number" step="0.01" min="0" placeholder="0.00" />
-      </div>
-      <div class="form-group">
-        <label>Categoria</label>
-        <select
-          v-model="form.categoriaId"
-          :class="{ 'input-error': categoriaTocada && !form.categoriaId }"
-          @change="categoriaTocada = true"
+      <div class="grid gap-4 max-w-md">
+        <UFormField
+          label="Nome"
+          :error="nomeTocado && form.nome.length < 5 ? `Mínimo 5 caracteres (${form.nome.length}/5)` : undefined"
         >
-          <option value="" disabled>Selecione uma categoria</option>
-          <option v-for="cat in categorias" :key="cat.id" :value="cat.id">
-            {{ cat.nome }}
-          </option>
-        </select>
-        <span v-if="categoriaTocada && !form.categoriaId" class="field-hint error">
-          Selecione uma categoria
-        </span>
-      </div>
-      <button
-        @click="salvar"
-        :disabled="form.nome.length < 5 || !form.categoriaId"
-        :title="form.nome.length < 5 ? 'O nome deve ter pelo menos 5 caracteres' : !form.categoriaId ? 'Selecione uma categoria' : ''"
-        class="btn btn-primary"
-      >
-        Salvar
-      </button>
-    </div>
+          <UInput
+            v-model="form.nome"
+            placeholder="Nome do produto"
+            @input="nomeTocado = true"
+            class="w-full"
+          />
+        </UFormField>
 
-    <div class="table-wrapper">
-      <table class="data-table">
-        <thead>
-          <tr>
-            <th>ID</th>
-            <th>Nome</th>
-            <th>Descrição</th>
-            <th>Preço</th>
-            <th>Categoria</th>
-            <th>Ações</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-if="!produtos || produtos.length === 0">
-            <td colspan="6" class="empty">Nenhum produto cadastrado.</td>
-          </tr>
-          <tr v-for="prod in produtos" :key="prod.id">
-            <td>{{ prod.id }}</td>
-            <td>{{ prod.nome }}</td>
-            <td>{{ prod.descricao }}</td>
-            <td>{{ prod.preco?.toFixed(2) ?? '0.00' }}</td>
-            <td>{{ prod.categoria?.nome }}</td>
-            <td class="acoes">
-              <button @click="abrirModal(prod)" class="btn btn-edit">Editar</button>
-              <button @click="confirmarDelete(prod)" class="btn btn-delete">Excluir</button>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
+        <UFormField label="Descrição">
+          <UInput v-model="form.descricao" placeholder="Descrição" class="w-full" />
+        </UFormField>
+
+        <UFormField label="Preço">
+          <UInputNumber
+            v-model="form.preco"
+            :min="0"
+            :step="0.01"
+            placeholder="0.00"
+            class="w-full"
+          />
+        </UFormField>
+
+        <UFormField
+          label="Categoria"
+          :error="categoriaTocada && !form.categoriaId ? 'Selecione uma categoria' : undefined"
+        >
+          <USelect
+            v-model="form.categoriaId"
+            :items="categoriasSelectItems"
+            placeholder="Selecione uma categoria"
+            @change="categoriaTocada = true"
+            class="w-full"
+          />
+        </UFormField>
+      </div>
+
+      <template #footer>
+        <div class="flex justify-end">
+          <UButton
+            icon="i-lucide-plus"
+            :disabled="form.nome.length < 5 || !form.categoriaId"
+            @click="salvar"
+          >
+            Salvar
+          </UButton>
+        </div>
+      </template>
+    </UCard>
+
+    <UCard>
+      <template #header>
+        <h2 class="text-base font-semibold text-gray-700 dark:text-gray-200">Lista de Produtos</h2>
+      </template>
+
+      <UTable :data="produtos ?? []" :columns="columns">
+        <template #acoes-cell="{ row }">
+          <div class="flex gap-2">
+            <UButton
+              size="sm"
+              color="warning"
+              variant="soft"
+              icon="i-lucide-pencil"
+              @click="abrirModal(row.original)"
+            >
+              Editar
+            </UButton>
+            <UButton
+              size="sm"
+              color="error"
+              variant="soft"
+              icon="i-lucide-trash-2"
+              @click="confirmarDelete(row.original)"
+            >
+              Excluir
+            </UButton>
+          </div>
+        </template>
+      </UTable>
+
+      <p
+        v-if="!produtos || produtos.length === 0"
+        class="text-center text-sm text-gray-400 italic py-6"
+      >
+        Nenhum produto cadastrado.
+      </p>
+    </UCard>
 
     <ProdutoModal
       v-if="showModal && produtoEditando"
@@ -221,205 +240,3 @@ async function excluir() {
     />
   </div>
 </template>
-
-<style scoped>
-.page-title {
-  font-size: 1.5rem;
-  font-weight: 700;
-  margin-bottom: 1.5rem;
-  color: #1e293b;
-}
-
-.toast-success {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  background-color: #f0fdf4;
-  border: 1px solid #86efac;
-  border-radius: 8px;
-  padding: 0.75rem 1rem;
-  margin-bottom: 1.25rem;
-  color: #15803d;
-  font-size: 0.9rem;
-}
-
-.toast-success .toast-close {
-  color: #15803d;
-}
-
-.toast-error {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  background-color: #fef2f2;
-  border: 1px solid #fca5a5;
-  border-radius: 8px;
-  padding: 0.75rem 1rem;
-  margin-bottom: 1.25rem;
-  color: #b91c1c;
-  font-size: 0.9rem;
-}
-
-.toast-close {
-  background: none;
-  border: none;
-  cursor: pointer;
-  color: #b91c1c;
-  font-size: 1rem;
-  padding: 0 0.25rem;
-  line-height: 1;
-}
-
-.form-card {
-  background: white;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
-  padding: 1.5rem;
-  margin-bottom: 2rem;
-  max-width: 480px;
-}
-
-.form-title {
-  font-size: 1rem;
-  font-weight: 600;
-  margin-bottom: 1rem;
-  color: #334155;
-}
-
-.form-group {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-  margin-bottom: 1rem;
-}
-
-.form-group label {
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: #475569;
-}
-
-.form-group input,
-.form-group select {
-  padding: 0.5rem 0.75rem;
-  border: 1px solid #cbd5e1;
-  border-radius: 6px;
-  font-size: 0.9rem;
-  outline: none;
-  transition: border-color 0.15s;
-  background: white;
-}
-
-.form-group input:focus,
-.form-group select:focus {
-  border-color: #3b82f6;
-}
-
-.form-group input.input-error,
-.form-group select.input-error {
-  border-color: #ef4444;
-}
-
-.field-hint {
-  font-size: 0.78rem;
-  color: #94a3b8;
-  margin-top: 0.1rem;
-}
-
-.field-hint.error {
-  color: #ef4444;
-}
-
-.btn {
-  padding: 0.5rem 1.25rem;
-  border: none;
-  border-radius: 6px;
-  font-size: 0.875rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: background-color 0.15s, opacity 0.15s;
-}
-
-.btn:disabled {
-  opacity: 0.45;
-  cursor: not-allowed;
-}
-
-.btn-primary {
-  background-color: #3b82f6;
-  color: white;
-}
-
-.btn-primary:not(:disabled):hover {
-  background-color: #2563eb;
-}
-
-.btn-edit {
-  background-color: #f59e0b;
-  color: white;
-  margin-right: 0.5rem;
-}
-
-.btn-edit:hover {
-  background-color: #d97706;
-}
-
-.btn-delete {
-  background-color: #ef4444;
-  color: white;
-}
-
-.btn-delete:hover {
-  background-color: #dc2626;
-}
-
-.table-wrapper {
-  overflow-x: auto;
-}
-
-.data-table {
-  width: 100%;
-  border-collapse: collapse;
-  background: white;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
-  overflow: hidden;
-}
-
-.data-table th {
-  background-color: #f8fafc;
-  padding: 0.75rem 1rem;
-  text-align: left;
-  font-size: 0.8rem;
-  font-weight: 600;
-  color: #64748b;
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
-  border-bottom: 1px solid #e2e8f0;
-}
-
-.data-table td {
-  padding: 0.75rem 1rem;
-  font-size: 0.9rem;
-  color: #334155;
-  border-bottom: 1px solid #f1f5f9;
-}
-
-.data-table tr:last-child td {
-  border-bottom: none;
-}
-
-.data-table tr:hover td {
-  background-color: #f8fafc;
-}
-
-.acoes {
-  white-space: nowrap;
-}
-
-.empty {
-  text-align: center;
-  color: #94a3b8;
-  font-style: italic;
-}
-</style>

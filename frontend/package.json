@@ -9,6 +9,11 @@
     "preview": "nuxt preview"
   },
   "devDependencies": {
-    "nuxt": "^3.13.0"
+    "nuxt": "^4.4.6"
+  },
+  "dependencies": {
+    "@iconify-json/lucide": "^1.2.110",
+    "@nuxt/ui": "^4.8.0",
+    "tailwindcss": "^4.3.0"
   }
 }
