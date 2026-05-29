@@ -84,8 +84,7 @@ function fecharModal() {
 
 function salvarEdicao(atualizado: Produto) {
   if (!produtos.value) return
-  const idx = produtos.value.findIndex(p => p.id === atualizado.id)
-  if (idx !== -1) produtos.value[idx] = atualizado
+  produtos.value = produtos.value.map(p => p.id === atualizado.id ? atualizado : p)
   fecharModal()
   toast.add({ title: 'Produto atualizado com sucesso.', color: 'success', icon: 'i-lucide-check' })
 }

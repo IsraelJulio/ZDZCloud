@@ -52,8 +52,7 @@ function fecharModal() {
 
 function salvarEdicao(atualizada: Categoria) {
   if (!categorias.value) return
-  const idx = categorias.value.findIndex(c => c.id === atualizada.id)
-  if (idx !== -1) categorias.value[idx] = atualizada
+  categorias.value = categorias.value.map(c => c.id === atualizada.id ? atualizada : c)
   fecharModal()
   toast.add({ title: 'Categoria atualizada com sucesso.', color: 'success', icon: 'i-lucide-check' })
 }
